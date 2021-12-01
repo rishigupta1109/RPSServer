@@ -11,16 +11,20 @@ const rule = {"rock": "paper",
 }
 const options = {};
 const pts = {};
+const usernames = {};
 
 io.on("connection", socket => {
     // console.log(socket.id);
-    socket.on("create-room", (roomid) => {
+    socket.on("create-room", ({ roomid, username }) => {
+        console.log(roomid, username);
         if (rooms[roomid]) {
             socket.emit("error","already exist");
         }
         else {
             rooms[roomid] = true;
             players[roomid] = [];
+            usernames[roomid] = [];
+            usernames[roomid][0] = username;
             players[roomid][0] = socket.id;
             pts[roomid] = [0, 0];
             console.log("room created");
@@ -28,13 +32,13 @@ io.on("connection", socket => {
             socket.emit("room-created",roomid);
         }
     })
-    socket.on("join-room", (roomid) => {
+    socket.on("join-room", ({roomid,username}) => {
         if (rooms[roomid]&&!players[roomid][1]) {
             players[roomid][1] = socket.id;
+            usernames[roomid][1] = username;
             socket.join(roomid);
             socket.emit("room-joined", roomid);
-          
-            io.to(roomid).emit("2p-joined",pts[roomid]);
+            io.to(roomid).emit("2p-joined",[pts[roomid],usernames[roomid]]);
         }
         else {
             socket.emit("error","room is full");
@@ -81,6 +85,10 @@ io.on("connection", socket => {
                 options[roomid][1] = choosed;
             }
         }
+    })
+    socket.on("send-message", ({ msg, roomid }) => {
+        socket.to(roomid).emit("recieve-msg", msg);
+        
     })
     socket.on("disconnect", () => {
         console.log("disconnected user");
